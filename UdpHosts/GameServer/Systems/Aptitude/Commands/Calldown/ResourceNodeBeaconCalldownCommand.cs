@@ -21,7 +21,7 @@ public class ResourceNodeBeaconCalldownCommand : ICommand
             uint nodeType = 20; // TODO: Figure out how to use and determine these
             var beaconType = Params.ResourceNodeBeaconId;
             var position = request.Position;
-            entityMan.SpawnThumper(nodeType, beaconType, position);
+            entityMan.SpawnThumper(nodeType, beaconType, position, (Entities.IEntity) caller);
             return true;
         }
         else

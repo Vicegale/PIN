@@ -5,6 +5,8 @@ using AeroMessages.GSS.V66.Character;
 using AeroMessages.GSS.V66.Character.Event;
 using GameServer.Data.SDB.Records.apt;
 using GameServer.Entities;
+using GameServer.Entities.Thumper;
+using GameServer.Enums;
 
 namespace GameServer.Aptitude;
 
@@ -65,6 +67,22 @@ public class EndInteractionCommand : ICommand
                             var entityMan = player.AssignedShard.EntityMan;
                             entityMan.ScopeIn(player, vehicle);
                         }
+                    }
+                }
+            }
+
+            if (interactionType == InteractionType.GenericHold)
+            {
+                if (actingEntity.GetType() == typeof(Entities.Character.CharacterEntity))
+                {
+                    var character = actingEntity as Entities.Character.CharacterEntity;
+                    if (interactionEntity.GetType() == typeof(ThumperEntity))
+                    {
+                        var thumper = interactionEntity as ThumperEntity;
+                        var boostOffAbilityId = thumper.Interaction.StartedAbilityId;
+                        thumper.SetState(ThumperState.COMPLETED);
+                        context.Shard.Abilities.HandleActivateAbility(context.Shard, interactionEntity, boostOffAbilityId, context.Shard.CurrentTime, new HashSet<IAptitudeTarget>() { });
+                        
                     }
                 }
             }

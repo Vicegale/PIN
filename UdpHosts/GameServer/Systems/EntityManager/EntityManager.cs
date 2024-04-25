@@ -23,6 +23,7 @@ using GameServer.Entities.MeldingBubble;
 using GameServer.Entities.Outpost;
 using GameServer.Entities.Thumper;
 using GameServer.Entities.Vehicle;
+using GameServer.Enums;
 using GameServer.Enums.GSS;
 using GameServer.Extensions;
 
@@ -213,11 +214,17 @@ public class EntityManager
         return outpostEntity;
     }
 
-    public ThumperEntity SpawnThumper(uint nodeType, uint beaconType, Vector3 position)
+    public ThumperEntity SpawnThumper(uint nodeType, uint beaconType, Vector3 position, IEntity owner)
     {
         var thumperEntity = new ThumperEntity(Shard, Shard.GetNextGuid(), nodeType, beaconType);
+        if (owner != null)
+        {
+            thumperEntity.SetOwner(owner as BaseEntity);
+        }
+        
         thumperEntity.SetPosition(position);
         Add(thumperEntity.EntityId, thumperEntity);
+        
         return thumperEntity;
     }
 
@@ -238,7 +245,7 @@ public class EntityManager
         SpawnDeployable(395, new Vector3(170.84642f, 243.20822f, 491.71597f), new Quaternion(0f, 0f, 0.92874485f, 0.37071964f));
 
         // Thumper
-        SpawnThumper(20, 33978, new Vector3(158.3f, 249.3f, 491.93f));
+        //SpawnThumper(20, 33978, new Vector3(158.3f, 249.3f, 491.93f));
 
         // Datapad
         SpawnCarryable(26, new Vector3(160.3f, 250.3f, 491.93f));
@@ -391,6 +398,44 @@ public class EntityManager
                         }
                     }
                 }
+            }
+        }
+
+        //Tick Thumpers
+        foreach (ThumperEntity thumper in Shard.Entities.Values.Where((entity => entity.GetType() == typeof(ThumperEntity))))
+        {
+            //var hash = t.GetHashCode();
+            switch (thumper.StateInfo.State)
+            {
+                case (byte) ThumperState.LANDING:
+                    // 12 seconds
+                    if (Shard.CurrentTime - thumper.StateInfo.Time >= 12000)
+                    {
+                        thumper.SetState(ThumperState.WARMINGUP);
+                        Shard.Abilities.HandleActivateAbility(Shard, thumper, 111, Shard.CurrentTime, new HashSet<IAptitudeTarget>());
+                    }
+                    break;
+                case (byte) ThumperState.WARMINGUP:
+                    // 5 seconds
+                    if (Shard.CurrentTime - thumper.StateInfo.Time >= 5000)
+                    {
+                        thumper.SetState(ThumperState.THUMPING);
+                        thumper.SetCountDownTime(Shard.CurrentTime + (500));
+                    }
+                    break;
+                case (byte) ThumperState.THUMPING:
+                    thumper.SetProgress(((Shard.CurrentTime - thumper.StateInfo.Time) /
+                                   (thumper.StateInfo.CountdownTime - thumper.StateInfo.Time)) / 100f);
+                    if (thumper.Progress > 1f)
+                        thumper.SetState(ThumperState.CLOSING);
+                    break;
+                case (byte) ThumperState.COMPLETED:
+                    if (Shard.CurrentTime - thumper.StateInfo.Time >= 15000)
+                    {
+                        Remove(thumper);
+                    }
+
+                    break;
             }
         }
     }
